@@ -7,5 +7,5 @@ data class AlarmObject(
     var isOn: Boolean,
     var timeString: String,
     var day: String,
-    val pendingIntent: PendingIntent?=null
+    val alarmId: Int
 )

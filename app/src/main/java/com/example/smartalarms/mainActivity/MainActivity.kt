@@ -13,16 +13,19 @@ import android.view.View
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.smartalarms.R
 import com.example.smartalarms.alarmUtill.AlarmService
 import com.example.smartalarms.data.AlarmObject
+import com.example.smartalarms.database.entites.AlarmEntity
 import com.example.smartalarms.mainActivity.adapters.MainAdapter
 import com.example.smartalarms.mainActivity.viewModel.MainActivityViewModel
 import com.example.smartalarms.other.CHANNEL_ID
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 private const val TAG= "MainActivity"
@@ -38,24 +41,23 @@ class MainActivity : AppCompatActivity() {
 
         viewModel  = MainActivityViewModel(this)
 
-
         val rv = findViewById<RecyclerView>(R.id.recyclerView2)
-      var adapter = MainAdapter(emptyList(),switchCallBack)
+      val adapter = MainAdapter(emptyList(),switchCallBack)
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = adapter
-
+        swipeHelper.attachToRecyclerView(rv)
         viewModel.getData().observe(this){ entity ->
             Log.d(TAG, "onCreate: latest alarms fetched")
-//            if (entity.isNotEmpty()){
-//            val alarms = ArrayList<AlarmObject>()
-//                entity.forEach{
-//                    alarms.add(it.alarm!!)
-//                }
-//                viewModel.alarmsList=alarms
-//                adapter.setData(alarms)
-//
-//
-//            }
+            if (entity.isNotEmpty()){
+            val alarms = ArrayList<AlarmObject>()
+                entity.forEach{
+                    alarms.add(it.alarm!!)
+                }
+                viewModel.alarmsList=entity as ArrayList<AlarmEntity>
+                adapter.setData(alarms)
+
+
+            }
         }
 
 
@@ -110,7 +112,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         bulkAlarms.setOnClickListener{
-            viewModel.setAlarm(0)
+            viewModel.addNewAlarm(Calendar.getInstance().timeInMillis+2000)
         }
 
 
@@ -118,10 +120,10 @@ class MainActivity : AppCompatActivity() {
 
     private val switchCallBack = fun(pos:Int, isChecked:Boolean ) {
         if (isChecked) {
-            viewModel.setAlarm(pos)
+            viewModel.turnOnAlarm(pos)
             Toast.makeText(this, "Alarm $pos Turned On", Toast.LENGTH_SHORT).show()
         } else {
-            viewModel.removeAlarm(pos)
+            viewModel.turnOfAlarm(pos)
             Toast.makeText(this, "Alarm $pos Turned Off", Toast.LENGTH_SHORT).show()
 
         }
@@ -144,7 +146,25 @@ class MainActivity : AppCompatActivity() {
             manager.createNotificationChannel(serviceChannel)
         }
     }
+    var swipeHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+        0,
+        ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+    ) {
+        override fun onMove(
+            recyclerView: RecyclerView,
+            viewHolder: RecyclerView.ViewHolder,
+            target: RecyclerView.ViewHolder
+        ): Boolean {
+            return false
+        }
 
+        override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+
+            if (direction == ItemTouchHelper.RIGHT){
+                viewModel.deleteAlarm(viewHolder.adapterPosition)
+            }
+        }
+    })
 
 
 

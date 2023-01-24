@@ -18,6 +18,8 @@ import java.util.*
 import java.util.concurrent.Flow
 import kotlin.collections.ArrayList
 
+
+private const val TAG= "MainActivityVM"
 class MainActivityViewModel(private val context: Context) : ViewModel() {
 
 
@@ -26,14 +28,19 @@ class MainActivityViewModel(private val context: Context) : ViewModel() {
     private val repo: AlarmDAO= AlarmDatabase.getInstance(context).alarmDao()
     private val _alarmLiveData = MutableLiveData<List<AlarmObject>>()
     private val alarmLiveData: LiveData<List<AlarmObject>> get() =  _alarmLiveData
-    var alarmsList= ArrayList<AlarmObject>()
+    var alarmsList= ArrayList<AlarmEntity>()
 
 
-    fun setAlarm(pos: Int){
-      // val alarm= alarmsList[pos]
-        val alarmIntent= AlarmHandler.setAlarm(calendar.timeInMillis+1000,context)
-      val alarmSet= AlarmObject(Random().nextLong(),false,"10.11","Fri,Sun",alarmIntent)
-       saveAlarmInDB(alarmSet)
+    fun addNewAlarm(timeInMillis: Long){
+        val alarmId = kotlin.random.Random.nextInt()
+        val isAlarmSet = AlarmHandler.setAlarm(timeInMillis,context,alarmId)
+        if (isAlarmSet){
+            val alarmSet= AlarmObject(Random().nextLong(),true,"10.11","Fri,Sun",alarmId)
+            saveAlarmInDB(alarmSet)
+
+        }else{
+            Log.d(TAG, "addNewAlarm: cannot add new alarm ")
+        }
     }
 
     private fun saveAlarmInDB(alarm: AlarmObject) {
@@ -49,9 +56,53 @@ class MainActivityViewModel(private val context: Context) : ViewModel() {
        return repo.getAllAlarms()
 
     }
-    fun removeAlarm(pos: Int){
-        val alarmIntent= alarmsList[pos].pendingIntent ?: return
-        AlarmHandler.removeAlarm(alarmIntent,context)
+    fun deleteAlarm(pos: Int){
+
+        val alarmId= alarmsList[pos].alarm!!.alarmId
+        var isRemoved= AlarmHandler.removeAlarm(alarmId,context)
+        if (isRemoved){
+            viewModelScope.launch(Dispatchers.IO) {
+                repo.delete(alarmsList[pos])
+            }
+        }
+    }
+    fun turnOnAlarm(pos:Int){
+        val alarmId =  alarmsList[pos].alarm!!.alarmId
+        val timeInMillis=  alarmsList[pos].alarm!!.longTime
+        val isAlarmSet = AlarmHandler.setAlarm(timeInMillis,context,alarmId)
+        if (isAlarmSet){
+            alarmsList[pos].alarm!!.isOn=true
+            updateAlarmStatusInDB(alarmsList[pos])
+
+        }else{
+            Log.d(TAG, "addNewAlarm: cannot set  alarm ")
+        }
+    }
+    fun turnOfAlarm(pos:Int){
+        val alarmId =  alarmsList[pos].alarm!!.alarmId
+        val isAlarmOff = AlarmHandler.removeAlarm(alarmId,context)
+        if (isAlarmOff){
+            alarmsList[pos].alarm!!.isOn=false
+            updateAlarmStatusInDB(alarmsList[pos])
+
+        }else{
+            Log.d(TAG, "addNewAlarm: cannot set  alarm ")
+        }
+    }
+
+    private fun updateAlarmStatusInDB(alarmObject: AlarmEntity) {
+
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.update(alarmObject)
+        }
+    }
+
+
+    fun deleteAllAlarms(){
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.deleteAllAlarms()
+
+        }
     }
 
 

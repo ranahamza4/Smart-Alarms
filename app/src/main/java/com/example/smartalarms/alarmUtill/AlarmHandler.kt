@@ -16,35 +16,42 @@ class AlarmHandler() {
 
     companion object {
         @SuppressLint("UnspecifiedImmutableFlag")
-        fun setAlarm(timeInMillis: Long, context: Context): PendingIntent? {
+        fun setAlarm(timeInMillis: Long, context: Context, alarmId:Int): Boolean {
 
             return try {
                 val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
                 val intent = Intent(context, AlarmBroadCastReceiver::class.java)
                 val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_MUTABLE)
+                    PendingIntent.getBroadcast(context, alarmId, intent, PendingIntent.FLAG_MUTABLE)
                 } else {
-                    PendingIntent.getBroadcast(context, 0, intent, 0)
+                    PendingIntent.getBroadcast(context, alarmId, intent, 0)
                 }
                 alarmManager.setExact(
                     AlarmManager.RTC_WAKEUP,
                     timeInMillis,
                     pendingIntent
                 )
-                pendingIntent
+                true
             } catch (e: Exception) {
                 Log.d(TAG, "setAlarm: ${e.message}")
-                null
+                false
             }
 
 
         }
 
-        fun removeAlarm(alarmIntent: PendingIntent, context: Context): Boolean {
+        fun removeAlarm(alarmId:Int, context: Context): Boolean {
 
             return try {
                 val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                alarmManager.cancel(alarmIntent)
+                val intent = Intent(context, AlarmBroadCastReceiver::class.java)
+                val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PendingIntent.getBroadcast(context, alarmId, intent, PendingIntent.FLAG_MUTABLE)
+                } else {
+                    PendingIntent.getBroadcast(context, alarmId, intent, 0)
+                }
+                alarmManager.cancel(pendingIntent)
+
                 true
 
             } catch (e: Exception) {
