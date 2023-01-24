@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">SmartAlarms</string>
+    <string name="smart_alarm_channel_id">SMART_ALARM_SERVICE_CHANNEL</string>
+</resources>
